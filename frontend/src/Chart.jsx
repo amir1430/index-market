@@ -9,6 +9,7 @@ export default function Chart({ rows, symbol }) {
   const wrap = useRef(null)
   const [w, setW] = useState(800)
   const [hover, setHover] = useState(null) // index into times
+  const [focus, setFocus] = useState(null) // highlighted series
   useLayoutEffect(() => {
     setW(wrap.current.clientWidth) // before first paint; observer fires async
     const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
@@ -93,14 +94,19 @@ export default function Chart({ rows, symbol }) {
   const hx = ht != null ? x(ht) : 0
   const hv = ht != null ? byTime.get(ht) : null
   const color = (s) => `var(--${s})`
+  const on = focus && series.includes(focus) ? focus : null
+  const dim = (s) => (on && s !== on ? 'dim' : undefined)
+  const toggle = (s) => setFocus((f) => (f === s ? null : s))
 
   return (
     <div ref={wrap} className="chart">
       <ul className="legend">
         {series.map((s) => (
           <li key={s}>
-            <i className={s === 'index' ? 'swatch line dashed' : 'swatch line'} style={{ '--c': color(s) }} />
-            {s}
+            <button className={dim(s)} aria-pressed={s === on} onClick={() => toggle(s)}>
+              <i className={s === 'index' ? 'swatch line dashed' : 'swatch line'} style={{ '--c': color(s) }} />
+              {s}
+            </button>
           </li>
         ))}
       </ul>
@@ -116,19 +122,20 @@ export default function Chart({ rows, symbol }) {
             {new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </text>
         ))}
-        {exchanges.map((s) => (
-          <path key={s} d={path(s)} fill="none" stroke={color(s)} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {/* focused exchange drawn last so it sits on top */}
+        {exchanges.toSorted((a, b) => (a === on) - (b === on)).map((s) => (
+          <path key={s} className={dim(s)} d={path(s)} fill="none" stroke={color(s)} strokeWidth={s === on ? 3 : 2} strokeLinejoin="round" strokeLinecap="round" />
         ))}
         {/* index on top: ink, dashed so it reads as derived, not another venue */}
-        <path d={path('index')} fill="none" stroke={color('index')} strokeWidth="2" strokeDasharray="6 4" strokeLinejoin="round" />
+        <path className={dim('index')} d={path('index')} fill="none" stroke={color('index')} strokeWidth={on === 'index' ? 3 : 2} strokeDasharray="6 4" strokeLinejoin="round" />
         {labels.map((l) => (
-          <text key={l.s} className={l.s === 'index' ? 'label strong' : 'label'} x={left + iw + 8} y={l.y} dy="0.32em">{l.s}</text>
+          <text key={l.s} className={`${l.s === 'index' || l.s === on ? 'label strong' : 'label'} ${dim(l.s) ?? ''}`} onClick={() => toggle(l.s)} x={left + iw + 8} y={l.y} dy="0.32em">{l.s}</text>
         ))}
         {ht != null && (
           <g>
             <line className="crosshair" x1={hx} x2={hx} y1={M.top} y2={M.top + ih} />
             {series.map((s) =>
-              hv[s] == null ? null : <circle key={s} cx={hx} cy={y(hv[s])} r="4" fill={color(s)} stroke="var(--surface)" strokeWidth="2" />,
+              hv[s] == null || dim(s) ? null : <circle key={s} cx={hx} cy={y(hv[s])} r="4" fill={color(s)} stroke="var(--surface)" strokeWidth="2" />,
             )}
           </g>
         )}
@@ -138,7 +145,7 @@ export default function Chart({ rows, symbol }) {
           <div className="muted">{new Date(ht).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
           {series.map((s) =>
             hv[s] == null ? null : (
-              <div key={s} className={s === 'index' ? 'row strong' : 'row'}>
+              <div key={s} className={`${s === 'index' || s === on ? 'row strong' : 'row'} ${dim(s) ?? ''}`}>
                 <i className="swatch" style={{ background: color(s) }} />
                 <span>{s}</span>
                 <b className="num">{fmtPrice(hv[s], symbol)}</b>

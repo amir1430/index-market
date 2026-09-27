@@ -24,7 +24,7 @@ func TestParse(t *testing.T) {
 		{Bybit, "BTC/USDT", `{"topic":"publicTrade.BTCUSDT","type":"snapshot","ts":1790000000001,"data":[{"T":1790000000000,"s":"BTCUSDT","S":"Buy","v":"0.001","p":"84729.9","L":"PlusTick","i":"1","BT":false}]}`, 84729.9, nil},
 		{Bybit, "BTC/USDT", `{"success":true,"ret_msg":"pong","conn_id":"x","op":"ping"}`, 0, nil},
 		// batched frame: connect reply + ping + IRT publication (rial -> toman)
-		{Nobitex, "BTC/TMN", "{\"id\":1,\"connect\":{\"ping\":25}}\n{}\n{\"push\":{\"channel\":\"public:trades-BTCIRT\",\"pub\":{\"data\":{\"price\":\"197700000000\",\"time\":1790000000000,\"type\":\"sell\",\"volume\":\"0.01\"}}}}", 19770000000, []string{"{}"}},
+		{Nobitex, "USDT/TMN", "{\"id\":1,\"connect\":{\"ping\":25}}\n{}\n{\"push\":{\"channel\":\"public:trades-USDTIRT\",\"pub\":{\"data\":{\"price\":\"197700000000\",\"time\":1790000000000,\"type\":\"sell\",\"volume\":\"0.01\"}}}}", 19770000000, []string{"{}"}},
 	}
 	for _, c := range cases {
 		base, quote, _ := strings.Cut(c.pair, "/")

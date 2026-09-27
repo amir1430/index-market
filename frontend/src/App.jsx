@@ -65,7 +65,7 @@ export default function App() {
         ))}
       </section>
 
-      {symbol && <History key={symbol} symbol={symbol} />}
+      {symbol && <History symbol={symbol} />}
     </main>
   )
 }
@@ -149,9 +149,9 @@ function Card({ symbol, rows, index, now, staleMs, on, onClick }) {
 
 function History({ symbol }) {
   const [range, setRange] = useState(() => (RANGES.includes(readPref('range')) ? readPref('range') : '6h'))
-  const [rows, err] = usePoll(`/api/history?symbol=${encodeURIComponent(symbol)}&range=${range}`, range === '1h' ? 10_000 : 30_000)
+  const [rows, err, loading] = usePoll(`/api/history?symbol=${encodeURIComponent(symbol)}&range=${range}`, range === '1h' ? 10_000 : 30_000)
   return (
-    <section className="panel">
+    <section className="panel" aria-busy={loading}>
       <div className="panel-head">
         <h2>
           {symbol} <span className="muted">· index vs exchanges</span>
@@ -172,7 +172,7 @@ function History({ symbol }) {
         </div>
       </div>
       {err && <p className="banner">History error: {err}</p>}
-      {rows && <Chart key={range} rows={rows} symbol={symbol} />}
+      {rows ? <Chart rows={rows} symbol={symbol} /> : <div className="chart" />}
     </section>
   )
 }

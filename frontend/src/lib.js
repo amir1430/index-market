@@ -18,16 +18,17 @@ export function fmtAge(ms) {
   return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m` : `${Math.floor(s / 3600)}h`
 }
 
-// Polls url every `ms`; returns [data, error]. Keeps last data on error.
+// Polls url every `ms`; returns [data, error, loading]. Keeps last data on
+// error and while a new url loads, so switching views doesn't blank the UI.
 export function usePoll(url, ms) {
-  const [state, setState] = useState([null, null])
+  const [state, setState] = useState({ url: null, data: null, err: null })
   useEffect(() => {
     let alive = true
     const load = () =>
       fetch(url)
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status} ${r.statusText}`))))
-        .then((d) => alive && setState([d, null]))
-        .catch((e) => alive && setState((s) => [s[0], e.message]))
+        .then((data) => alive && setState({ url, data, err: null }))
+        .catch((e) => alive && setState((s) => ({ ...s, err: e.message })))
     load()
     const id = setInterval(load, ms)
     return () => {
@@ -35,5 +36,5 @@ export function usePoll(url, ms) {
       clearInterval(id)
     }
   }, [url, ms])
-  return state
+  return [state.data, state.err, state.url !== url]
 }

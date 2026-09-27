@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"syscall"
 	"time"
 
@@ -17,8 +18,8 @@ import (
 var pairs = map[string][]string{
 	"binance": {"BTC/USDT", "ETH/USDT"},
 	"kucoin":  {"BTC/USDT", "ETH/USDT"},
-	"wallex":  {"BTC/USDT", "ETH/USDT", "USDT/TMN", "BTC/TMN"},
-	"nobitex": {"BTC/USDT", "ETH/USDT", "USDT/TMN", "BTC/TMN"},
+	"wallex":  {"BTC/USDT", "ETH/USDT", "USDT/TMN"},
+	"nobitex": {"BTC/USDT", "ETH/USDT", "USDT/TMN"},
 	"okx":     {"BTC/USDT", "ETH/USDT"},
 	"bitget":  {"BTC/USDT", "ETH/USDT"},
 	"bybit":   {"BTC/USDT", "ETH/USDT"},
@@ -66,6 +67,8 @@ func main() {
 			queryFailed(w, err)
 			return
 		}
+		// LATEST ON keeps returning pairs we no longer track; drop them.
+		rows = slices.DeleteFunc(rows, func(r map[string]any) bool { s, _ := r["symbol"].(string); return !known[s] })
 		writeJSON(w, map[string]any{"prices": rows, "index": latestIndex(rows, time.Now(), maxAge), "maxAgeMs": maxAge.Milliseconds()})
 	})
 	// range -> lookback + bucket size, keeps every chart at ~360 points

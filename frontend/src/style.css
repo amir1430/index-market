@@ -180,10 +180,22 @@ header { display: flex; justify-content: space-between; align-items: center; gap
 .seg button:hover { color: var(--text); }
 .seg button[aria-pressed='true'] { background: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--glow); }
 
-.chart { position: relative; width: 100%; }
+.chart { position: relative; width: 100%; min-height: 370px; transition: opacity 0.2s; }
+.panel[aria-busy='true'] .chart { opacity: 0.45; }
 .chart svg { display: block; }
 .chart .empty { padding: 48px 0; text-align: center; }
-.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 16px; padding: 0; margin: 0 0 8px; color: var(--text-2); font-size: 13px; }
+.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 0; margin: 0 0 8px; color: var(--text-2); font-size: 13px; }
+.legend button {
+  border: 1px solid transparent; background: none; padding: 3px 10px; border-radius: 999px; cursor: pointer; color: inherit;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+.legend button:hover { border-color: var(--border); }
+.legend button[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+.chart path, .chart .label { transition: opacity 0.15s; }
+.chart .label { cursor: pointer; }
+.chart .dim { opacity: 0.18; }
+.legend button.dim { opacity: 0.5; }
+.tooltip .row.dim { opacity: 0.45; }
 .grid { stroke: var(--grid); stroke-width: 1; }
 .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .label { fill: var(--text-2); font-size: 12px; }
