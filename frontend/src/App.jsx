@@ -38,9 +38,16 @@ export default function App() {
   return (
     <main>
       <header>
-        <div>
-          <h1>Index Market</h1>
-          <p className="sub">Median index price across exchanges · stale sources (&gt;{fmtAge(staleMs)}) excluded</p>
+        <div className="brand">
+          <span className="logo" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 14l4-4 3 3 7-7" />
+            </svg>
+          </span>
+          <div>
+            <h1>Index Market</h1>
+            <p className="sub">Median index price across exchanges · stale sources (&gt;{fmtAge(staleMs)}) excluded</p>
+          </div>
         </div>
         <div className="header-right">
           <ExchangeStatus prices={prices} now={now} staleMs={staleMs} />
