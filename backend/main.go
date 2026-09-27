@@ -19,6 +19,9 @@ var pairs = map[string][]string{
 	"kucoin":  {"BTC/USDT", "ETH/USDT"},
 	"wallex":  {"BTC/USDT", "ETH/USDT", "USDT/TMN", "BTC/TMN"},
 	"nobitex": {"BTC/USDT", "ETH/USDT", "USDT/TMN", "BTC/TMN"},
+	"okx":     {"BTC/USDT", "ETH/USDT"},
+	"bitget":  {"BTC/USDT", "ETH/USDT"},
+	"bybit":   {"BTC/USDT", "ETH/USDT"},
 }
 
 func env(k, def string) string {

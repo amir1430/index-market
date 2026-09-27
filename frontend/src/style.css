@@ -18,11 +18,14 @@
   --bad: #d03b3b;
   --good: #0ca30c;
   --warn: #fab219;
-  /* categorical slots 1-4, fixed per exchange; index is ink, not a series hue */
+  /* categorical slots 1-7, fixed per exchange; index is ink, not a series hue */
   --binance: #2a78d6;
   --kucoin: #eb6834;
   --wallex: #1baf7a;
   --nobitex: #eda100;
+  --okx: #8b5cd6;
+  --bitget: #d4488f;
+  --bybit: #8c6d46;
   --index: var(--text);
 }
 @media (prefers-color-scheme: dark) {
@@ -46,6 +49,9 @@
     --kucoin: #d95926;
     --wallex: #199e70;
     --nobitex: #c98500;
+    --okx: #9d74e8;
+    --bitget: #e0609f;
+    --bybit: #a8865a;
   }
 }
 :root[data-theme='dark'] {
@@ -68,6 +74,9 @@
   --kucoin: #d95926;
   --wallex: #199e70;
   --nobitex: #c98500;
+  --okx: #9d74e8;
+  --bitget: #e0609f;
+  --bybit: #a8865a;
 }
 
 * { box-sizing: border-box; }

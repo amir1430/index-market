@@ -5,6 +5,7 @@ package exchange
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"sync"
@@ -76,10 +77,18 @@ func runOnce(ctx context.Context, ex Exchange, natives []string, syms map[string
 	if err != nil {
 		return fmt.Errorf("url: %w", err)
 	}
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
+	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
 	if err != nil {
-		return fmt.Errorf("dial: %w", err)
+		// A bad handshake hides the reason; the HTTP status says it
+		// (451/403 = geo-blocked, 429 = rate-limited).
+		if resp != nil {
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 300))
+			resp.Body.Close()
+			return fmt.Errorf("dial %s: %w: HTTP %s: %s", url, err, resp.Status, strings.Join(strings.Fields(string(body)), " "))
+		}
+		return fmt.Errorf("dial %s: %w", url, err)
 	}
+	log.Printf("%s: connected to %s", ex.Name, url)
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
@@ -126,11 +135,15 @@ func runOnce(ctx context.Context, ex Exchange, natives []string, syms map[string
 		}()
 	}
 
+	frames, gotTick := 0, false
 	for {
 		conn.SetReadDeadline(time.Now().Add(readTimeout))
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			return fmt.Errorf("read: %w", err)
+		}
+		if frames++; frames == 1 {
+			log.Printf("%s: first frame: %.200s", ex.Name, msg)
 		}
 		ticks, replies, err := ex.Parse(msg, syms)
 		if err != nil {
@@ -141,6 +154,10 @@ func runOnce(ctx context.Context, ex Exchange, natives []string, syms map[string
 			if err := write(r); err != nil {
 				return fmt.Errorf("reply: %w", err)
 			}
+		}
+		if len(ticks) > 0 && !gotTick {
+			gotTick = true
+			log.Printf("%s: streaming, first tick %s %v", ex.Name, ticks[0].Symbol, ticks[0].Price)
 		}
 		for _, t := range ticks {
 			t.Exchange = ex.Name
@@ -161,4 +178,4 @@ func staticURL(u string) func(context.Context, []string) (string, error) {
 func concat(base, quote string) string { return base + quote }
 
 // All returns every supported exchange.
-func All() []Exchange { return []Exchange{Binance, KuCoin, Wallex, Nobitex} }
+func All() []Exchange { return []Exchange{Binance, KuCoin, Wallex, Nobitex, OKX, Bitget, Bybit} }

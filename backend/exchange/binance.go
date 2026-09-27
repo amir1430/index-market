@@ -9,6 +9,8 @@ import (
 )
 
 // Binance: combined trade streams, symbols encoded in the URL.
+// data-stream.binance.vision is Binance's market-data-only host on :443;
+// stream.binance.com:9443 is often firewalled or geo-blocked on cloud hosts.
 var Binance = Exchange{
 	Name:   "binance",
 	Native: concat,
@@ -17,7 +19,7 @@ var Binance = Exchange{
 		for i, n := range natives {
 			streams[i] = strings.ToLower(n) + "@trade"
 		}
-		return "wss://stream.binance.com:9443/stream?streams=" + strings.Join(streams, "/"), nil
+		return "wss://data-stream.binance.vision/stream?streams=" + strings.Join(streams, "/"), nil
 	},
 	Parse: func(msg []byte, syms map[string]string) ([]Tick, [][]byte, error) {
 		var m struct {

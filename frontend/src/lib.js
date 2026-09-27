@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 // Fixed order = fixed color slot per exchange (color follows the entity).
-export const EXCHANGES = ['binance', 'kucoin', 'wallex', 'nobitex']
+export const EXCHANGES = ['binance', 'kucoin', 'wallex', 'nobitex', 'okx', 'bitget', 'bybit']
 
 export function fmtPrice(p, symbol) {
   const digits = symbol.endsWith('/TMN') ? 0 : p < 10 ? 4 : 2
