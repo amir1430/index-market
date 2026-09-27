@@ -1,0 +1,28 @@
+services:
+  questdb:
+    image: questdb/questdb:10.0.1
+    restart: unless-stopped
+    ports:
+      - "${QUESTDB_PORT:-9010}:9000" # web console + REST
+    volumes:
+      - questdb-data:/var/lib/questdb
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      QUESTDB_URL: http://questdb:9000
+      INDEX_MAX_AGE: ${INDEX_MAX_AGE:-2m}
+    depends_on:
+      - questdb
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${PANEL_PORT:-3000}:80"
+    depends_on:
+      - backend
+
+volumes:
+  questdb-data:

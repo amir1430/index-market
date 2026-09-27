@@ -1,0 +1,156 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f4f2;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e3e2de;
+  --grid: #ecebe7;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #7a7974;
+  --accent: #2a78d6;
+  --bad: #d03b3b;
+  --good: #0ca30c;
+  --warn: #fab219;
+  /* categorical slots 1-4, fixed per exchange; index is ink, not a series hue */
+  --binance: #2a78d6;
+  --kucoin: #eb6834;
+  --wallex: #1baf7a;
+  --nobitex: #eda100;
+  --index: var(--text);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #111110;
+    --surface: #1a1a19;
+    --surface-2: #232322;
+    --border: #2e2e2c;
+    --grid: #262624;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #8f8e87;
+    --accent: #3987e5;
+    --bad: #e66767;
+    --binance: #3987e5;
+    --kucoin: #d95926;
+    --wallex: #199e70;
+    --nobitex: #c98500;
+  }
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #111110;
+  --surface: #1a1a19;
+  --surface-2: #232322;
+  --border: #2e2e2c;
+  --grid: #262624;
+  --text: #ffffff;
+  --text-2: #c3c2b7;
+  --muted: #8f8e87;
+  --accent: #3987e5;
+  --bad: #e66767;
+  --binance: #3987e5;
+  --kucoin: #d95926;
+  --wallex: #199e70;
+  --nobitex: #c98500;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0; }
+.sub { margin: 2px 0 0; color: var(--text-2); font-size: 13px; }
+.muted { color: var(--muted); font-weight: normal; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.exstatus { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; }
+.exstatus li {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); font-size: 12px;
+}
+.exstatus .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.exstatus .live .dot { background: var(--good); }
+.exstatus .stale .dot { background: var(--warn); }
+.ghost {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer; color: var(--text-2);
+}
+.ghost:hover { color: var(--text); border-color: var(--text-2); }
+.banner {
+  margin: 0 0 16px; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--bad); color: var(--bad); background: var(--surface);
+}
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.card {
+  all: unset;
+  display: flex; flex-direction: column; gap: 6px;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px 12px;
+  transition: border-color 0.15s;
+}
+.card:hover { border-color: var(--text-2); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; }
+.card-head h2 { font-size: 14px; }
+.hero { text-align: left; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+.card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.card td { white-space: nowrap; padding: 4px 0; border-top: 1px solid var(--grid); color: var(--text); }
+.card td.dev { color: var(--text-2); width: 5.5em; }
+.card td.age { width: 3em; }
+.card tr.stale td { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--border); }
+.card tr.stale td.age { text-decoration: none; }
+
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
+.swatch.line { height: 2px; width: 16px; vertical-align: 3px; background: var(--c); }
+.swatch.line.dashed { background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 9px); }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 2px; }
+.seg button { border: 0; background: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; color: var(--text-2); font-size: 13px; }
+.seg button[aria-pressed='true'] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.15); }
+
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; }
+.chart .empty { padding: 48px 0; text-align: center; }
+.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 16px; padding: 0; margin: 0 0 8px; color: var(--text-2); font-size: 13px; }
+.grid { stroke: var(--grid); stroke-width: 1; }
+.tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.label { fill: var(--text-2); font-size: 12px; }
+.label.strong { fill: var(--text); font-weight: 600; }
+.crosshair { stroke: var(--text-2); stroke-width: 1; stroke-dasharray: 3 3; }
+.tooltip {
+  position: absolute;
+  top: 36px;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.14);
+  font-size: 12px;
+  min-width: 220px;
+}
+.tooltip .row { display: flex; align-items: center; gap: 4px; padding: 1px 0; }
+.tooltip .row span { flex: 1; color: var(--text-2); }
+.tooltip .row em { font-style: normal; color: var(--muted); width: 5em; }
+.tooltip .row.strong span, .tooltip .row.strong b { color: var(--text); }
+.card td.num { padding-left: 12px; }
