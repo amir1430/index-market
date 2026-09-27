@@ -14,17 +14,6 @@ import (
 	"index-market/exchange"
 )
 
-// Pairs per exchange, normalized BASE/QUOTE. TMN = toman.
-var pairs = map[string][]string{
-	"binance": {"BTC/USDT", "ETH/USDT"},
-	"kucoin":  {"BTC/USDT", "ETH/USDT"},
-	"wallex":  {"BTC/USDT", "ETH/USDT", "USDT/TMN"},
-	"nobitex": {"BTC/USDT", "ETH/USDT", "USDT/TMN"},
-	"okx":     {"BTC/USDT", "ETH/USDT"},
-	"bitget":  {"BTC/USDT", "ETH/USDT"},
-	"bybit":   {"BTC/USDT", "ETH/USDT"},
-}
-
 func env(k, def string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
@@ -42,18 +31,12 @@ func main() {
 	}
 
 	ticks := make(chan exchange.Tick, 4096)
-	for _, ex := range exchange.All() {
-		go exchange.Run(ctx, ex, pairs[ex.Name], ticks)
+	st, err := openStreams(ctx, env("SQLITE_PATH", "pairs.db"), ticks)
+	if err != nil {
+		log.Fatalf("sqlite: %v", err)
 	}
+	st.startAll()
 	go db.write(ctx, ticks)
-
-	// Whitelist: symbol goes into SQL (QuestDB /exec has no bind params).
-	known := map[string]bool{}
-	for _, ps := range pairs {
-		for _, p := range ps {
-			known[p] = true
-		}
-	}
 
 	maxAge, err := time.ParseDuration(env("INDEX_MAX_AGE", "2m"))
 	if err != nil {
@@ -68,7 +51,7 @@ func main() {
 			return
 		}
 		// LATEST ON keeps returning pairs we no longer track; drop them.
-		rows = slices.DeleteFunc(rows, func(r map[string]any) bool { s, _ := r["symbol"].(string); return !known[s] })
+		rows = slices.DeleteFunc(rows, func(r map[string]any) bool { s, _ := r["symbol"].(string); return !st.known(s) })
 		writeJSON(w, map[string]any{"prices": rows, "index": latestIndex(rows, time.Now(), maxAge), "maxAgeMs": maxAge.Milliseconds()})
 	})
 	// range -> lookback + bucket size, keeps every chart at ~360 points
@@ -76,7 +59,8 @@ func main() {
 	mux.HandleFunc("GET /api/history", func(w http.ResponseWriter, r *http.Request) {
 		sym := r.URL.Query().Get("symbol")
 		rg, ok := ranges[r.URL.Query().Get("range")]
-		if !known[sym] || !ok {
+		// Whitelist: symbol goes into SQL (QuestDB /exec has no bind params).
+		if !st.known(sym) || !ok {
 			http.Error(w, "unknown symbol or range", http.StatusBadRequest)
 			return
 		}
@@ -92,6 +76,28 @@ func main() {
 		}
 		writeJSON(w, withIndexSeries(rows))
 	})
+
+	mux.HandleFunc("GET /api/pairs", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, st.snapshot())
+	})
+	// Body: {"exchange":"binance","symbol":"SOL/USDT"}. POST adds, DELETE removes.
+	// ponytail: no auth, anyone reaching the panel can edit pairs; add a token if it's exposed publicly
+	setPair := func(on bool) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			var b struct{ Exchange, Symbol string }
+			if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<10)).Decode(&b); err != nil {
+				http.Error(w, "bad json", http.StatusBadRequest)
+				return
+			}
+			if err := st.set(b.Exchange, b.Symbol, on); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			writeJSON(w, st.snapshot())
+		}
+	}
+	mux.HandleFunc("POST /api/pairs", setPair(true))
+	mux.HandleFunc("DELETE /api/pairs", setPair(false))
 
 	srv := &http.Server{Addr: env("ADDR", ":8080"), Handler: mux}
 	go func() {

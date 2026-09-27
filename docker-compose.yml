@@ -13,6 +13,9 @@ services:
     environment:
       QUESTDB_URL: http://questdb:9000
       INDEX_MAX_AGE: ${INDEX_MAX_AGE:-2m}
+      SQLITE_PATH: /data/pairs.db
+    volumes:
+      - backend-data:/data
     depends_on:
       - questdb
 
@@ -26,3 +29,4 @@ services:
 
 volumes:
   questdb-data:
+  backend-data:

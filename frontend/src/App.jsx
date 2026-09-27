@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Chart from './Chart.jsx'
 import { EXCHANGES, fmtAge, fmtPct, fmtPrice, usePoll } from './lib.js'
 
@@ -20,6 +20,7 @@ function writePref(k, v) {
 export default function App() {
   const [data, err] = usePoll('/api/latest', 2000)
   const [selected, setSelected] = useState(readPref('symbol'))
+  const [editing, setEditing] = useState(false)
   const now = Date.now()
   const staleMs = data?.maxAgeMs ?? 120_000 // backend INDEX_MAX_AGE
 
@@ -51,12 +52,16 @@ export default function App() {
         </div>
         <div className="header-right">
           <ExchangeStatus prices={prices} now={now} staleMs={staleMs} />
+          <button className="ghost" aria-pressed={editing} aria-label="Edit pairs" title="Edit pairs" onClick={() => setEditing(!editing)}>
+            ⚙︎
+          </button>
           <ThemeToggle />
         </div>
       </header>
 
       {err && <p className="banner">Can't reach API ({err}) — showing last known data.</p>}
       {!data && !err && <p className="muted">Loading…</p>}
+      {editing && <Pairs />}
       {data && symbols.length === 0 && <p className="muted">No prices yet — exchanges are connecting.</p>}
 
       <section className="cards">
@@ -85,6 +90,85 @@ function ExchangeStatus({ prices, now, staleMs }) {
         )
       })}
     </ul>
+  )
+}
+
+// Tracked pairs per exchange, stored in the backend's SQLite. Changes apply live.
+function Pairs() {
+  const [pairs, setPairs] = useState(null)
+  const [err, setErr] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const call = (method, body) => {
+    setBusy(true)
+    const init = body && { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    return fetch('/api/pairs', init)
+      .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.text()).trim() || r.statusText))))
+      .then((p) => {
+        setPairs(p)
+        setErr(null)
+        return true
+      })
+      .catch((e) => {
+        setErr(e.message)
+        return false
+      })
+      .finally(() => setBusy(false))
+  }
+  useEffect(() => {
+    call('GET')
+  }, [])
+
+  const add = async (e) => {
+    e.preventDefault()
+    const f = e.currentTarget
+    const d = new FormData(f)
+    if (await call('POST', { exchange: d.get('exchange'), symbol: d.get('symbol') })) f.elements.symbol.value = ''
+  }
+
+  return (
+    <section className="panel pairs-panel" aria-busy={busy}>
+      <div className="panel-head">
+        <h2>
+          Pairs <span className="muted">· new pairs appear once the first trade arrives</span>
+        </h2>
+        <form className="pair-add" onSubmit={add}>
+          <select name="exchange" aria-label="Exchange">
+            {EXCHANGES.map((ex) => (
+              <option key={ex}>{ex}</option>
+            ))}
+          </select>
+          <input name="symbol" placeholder="SOL/USDT" aria-label="Pair" required pattern="[A-Za-z0-9]{1,15}/[A-Za-z0-9]{1,15}" title="BASE/QUOTE, e.g. SOL/USDT" />
+          <button className="primary" disabled={busy}>
+            Add
+          </button>
+        </form>
+      </div>
+      {err && <p className="banner">{err}</p>}
+      {!pairs && !err && <p className="muted">Loading…</p>}
+      {pairs && (
+        <ul className="pairs">
+          {EXCHANGES.map((ex) => (
+            <li key={ex}>
+              <span className="pairs-ex">
+                <i className="swatch" style={{ background: `var(--${ex})` }} />
+                {ex}
+              </span>
+              <span className="chips">
+                {(pairs[ex] ?? []).map((p) => (
+                  <span className="chip" key={p}>
+                    {p}
+                    <button aria-label={`Remove ${p} from ${ex}`} disabled={busy} onClick={() => call('DELETE', { exchange: ex, symbol: p })}>
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {!pairs[ex]?.length && <span className="muted">none</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
