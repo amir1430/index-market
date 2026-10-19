@@ -20,7 +20,8 @@ type Tick struct {
 	Exchange string
 	Symbol   string
 	Price    float64
-	Time     time.Time
+	Time     time.Time // trade time, the exchange's clock
+	Recv     time.Time // when we read it, our clock: staleness is measured on this
 }
 
 // Exchange describes how to talk to one venue. Only Parse is required
@@ -159,8 +160,10 @@ func runOnce(ctx context.Context, ex Exchange, natives []string, syms map[string
 			gotTick = true
 			log.Printf("%s: streaming, first tick %s %v", ex.Name, ticks[0].Symbol, ticks[0].Price)
 		}
+		recv := time.Now()
 		for _, t := range ticks {
 			t.Exchange = ex.Name
+			t.Recv = recv
 			select {
 			case out <- t:
 			case <-ctx.Done():
@@ -177,5 +180,5 @@ func staticURL(u string) func(context.Context, []string) (string, error) {
 
 func concat(base, quote string) string { return base + quote }
 
-// All returns every supported exchange.
-func All() []Exchange { return []Exchange{Binance, KuCoin, Wallex, Nobitex, OKX, Bitget, Bybit} }
+// All returns the index's exchanges, in the order sources are listed.
+func All() []Exchange { return []Exchange{Binance, OKX, Bybit} }

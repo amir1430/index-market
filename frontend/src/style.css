@@ -20,11 +20,7 @@
   --warn: #fab219;
   /* categorical slots 1-7, fixed per exchange; index is ink, not a series hue */
   --binance: #2a78d6;
-  --kucoin: #eb6834;
-  --wallex: #1baf7a;
-  --nobitex: #eda100;
   --okx: #8b5cd6;
-  --bitget: #d4488f;
   --bybit: #8c6d46;
   --index: var(--text);
 }
@@ -46,11 +42,7 @@
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.35);
     --bad: #e66767;
     --binance: #3987e5;
-    --kucoin: #d95926;
-    --wallex: #199e70;
-    --nobitex: #c98500;
     --okx: #9d74e8;
-    --bitget: #e0609f;
     --bybit: #a8865a;
   }
 }
@@ -71,11 +63,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.35);
   --bad: #e66767;
   --binance: #3987e5;
-  --kucoin: #d95926;
-  --wallex: #199e70;
-  --nobitex: #c98500;
   --okx: #9d74e8;
-  --bitget: #e0609f;
   --bybit: #a8865a;
 }
 
@@ -219,31 +207,3 @@ header { display: flex; justify-content: space-between; align-items: center; gap
 .tooltip .row em { font-style: normal; color: var(--muted); width: 5em; }
 .tooltip .row.strong span, .tooltip .row.strong b { color: var(--text); }
 
-.ghost[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-.pairs-panel { margin-bottom: 16px; }
-.pair-add { display: flex; gap: 6px; flex-wrap: wrap; }
-.pair-add select, .pair-add input {
-  font: inherit; color: var(--text); background: var(--surface-2);
-  border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; min-width: 0;
-}
-.pair-add input { width: 9em; text-transform: uppercase; }
-.pair-add input::placeholder { text-transform: none; color: var(--muted); }
-.primary {
-  border: 0; border-radius: 10px; padding: 6px 16px; cursor: pointer; font-weight: 600;
-  background: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--glow);
-}
-.primary:disabled { opacity: 0.6; cursor: default; }
-.pairs { list-style: none; margin: 0; padding: 0; }
-.pairs li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--grid); }
-.pairs-ex { width: 7em; flex: none; font-weight: 500; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip {
-  display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 10px;
-  border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2);
-  font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
-}
-.chip button {
-  border: 0; background: none; cursor: pointer; color: var(--muted);
-  width: 20px; height: 20px; border-radius: 50%; line-height: 1;
-}
-.chip button:hover { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }

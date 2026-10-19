@@ -12,10 +12,12 @@ services:
     restart: unless-stopped
     environment:
       QUESTDB_URL: http://questdb:9000
-      INDEX_MAX_AGE: ${INDEX_MAX_AGE:-2m}
-      SQLITE_PATH: /data/pairs.db
-    volumes:
-      - backend-data:/data
+      MARKETS: ${MARKETS:-BTC/USDT,ETH/USDT}
+      INDEX_EVERY: ${INDEX_EVERY:-250ms}
+      INDEX_MAX_AGE: ${INDEX_MAX_AGE:-5s}
+      INDEX_MIN_SOURCES: ${INDEX_MIN_SOURCES:-2}
+      VALKEY_URL: ${VALKEY_URL:-}
+      VALKEY_MAXLEN: ${VALKEY_MAXLEN:-14400}
     depends_on:
       - questdb
 
@@ -29,4 +31,3 @@ services:
 
 volumes:
   questdb-data:
-  backend-data:

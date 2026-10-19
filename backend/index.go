@@ -2,17 +2,23 @@ package main
 
 import (
 	"slices"
+	"sync"
 	"time"
+
+	"index-market/exchange"
 )
 
-// Index price = plain median of each exchange's last price for a symbol.
-// ponytail: unweighted median; switch to volume-weighted median once trade size is stored.
+// Index price = median of the last trade price of every exchange whose last
+// tick arrived within maxAge. Fewer than minSources fresh exchanges = stale:
+// consumers must not settle on a stale tick.
+// ponytail: unweighted median of last trades; mid-price (bookTicker) if it looks jumpy.
 
 type indexPrice struct {
-	Symbol  string   `json:"symbol"`
-	Price   float64  `json:"price"`
-	Sources []string `json:"sources"` // exchanges that contributed
-	TS      string   `json:"ts"`      // newest contributing tick
+	Symbol  string    `json:"symbol"`
+	Price   float64   `json:"price"` // 0 when no exchange is fresh
+	Stale   bool      `json:"stale"`
+	Sources []string  `json:"sources"` // fresh exchanges that make up the median
+	TS      time.Time `json:"ts"`
 }
 
 func median(xs []float64) float64 {
@@ -25,38 +31,59 @@ func median(xs []float64) float64 {
 	return (s[n/2-1] + s[n/2]) / 2
 }
 
-// latestIndex computes one index per symbol from LATEST ON rows, skipping
-// exchanges whose last tick is older than maxAge (disconnected or illiquid).
-func latestIndex(rows []map[string]any, now time.Time, maxAge time.Duration) []indexPrice {
-	type acc struct {
-		prices  []float64
-		sources []string
-		newest  string
+// book holds the last tick of every exchange × market.
+type book struct {
+	mu   sync.Mutex
+	last map[string]map[string]exchange.Tick // symbol -> exchange -> tick
+}
+
+func newBook() *book { return &book{last: map[string]map[string]exchange.Tick{}} }
+
+func (b *book) put(t exchange.Tick) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	m := b.last[t.Symbol]
+	if m == nil {
+		m = map[string]exchange.Tick{}
+		b.last[t.Symbol] = m
 	}
-	by := map[string]*acc{}
-	var order []string
-	for _, r := range rows {
-		sym, _ := r["symbol"].(string)
-		price, ok := r["price"].(float64)
-		ts, _ := r["ts"].(string)
-		t, err := time.Parse(time.RFC3339Nano, ts)
-		if !ok || err != nil || now.Sub(t) > maxAge {
-			continue
+	m[t.Exchange] = t
+}
+
+// ticks returns sym's last tick per exchange, in exchange.All() order.
+func (b *book) ticks(sym string) []exchange.Tick {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	var out []exchange.Tick
+	for _, ex := range exchange.All() {
+		if t, ok := b.last[sym][ex.Name]; ok {
+			out = append(out, t)
 		}
-		a := by[sym]
-		if a == nil {
-			a = &acc{}
-			by[sym] = a
-			order = append(order, sym)
-		}
-		a.prices = append(a.prices, price)
-		a.sources = append(a.sources, r["exchange"].(string))
-		a.newest = max(a.newest, ts) // same format, so lexical order = time order
 	}
-	out := make([]indexPrice, 0, len(order))
-	for _, sym := range order {
-		a := by[sym]
-		out = append(out, indexPrice{Symbol: sym, Price: median(a.prices), Sources: a.sources, TS: a.newest})
+	return out
+}
+
+func fresh(t exchange.Tick, now time.Time, maxAge time.Duration) bool {
+	return now.Sub(t.Recv) <= maxAge
+}
+
+// index computes every market's index at now.
+func (b *book) index(markets []string, now time.Time, maxAge time.Duration, minSources int) []indexPrice {
+	out := make([]indexPrice, 0, len(markets))
+	for _, sym := range markets {
+		ip := indexPrice{Symbol: sym, TS: now, Sources: []string{}}
+		var ps []float64
+		for _, t := range b.ticks(sym) {
+			if fresh(t, now, maxAge) {
+				ps = append(ps, t.Price)
+				ip.Sources = append(ip.Sources, t.Exchange)
+			}
+		}
+		if len(ps) > 0 {
+			ip.Price = median(ps)
+		}
+		ip.Stale = len(ps) < minSources
+		out = append(out, ip)
 	}
 	return out
 }
