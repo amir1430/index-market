@@ -2,8 +2,6 @@ services:
   questdb:
     image: questdb/questdb:10.0.1
     restart: unless-stopped
-    ports:
-      - "${QUESTDB_PORT:-9010}:9000" # web console + REST
     volumes:
       - questdb-data:/var/lib/questdb
 
@@ -24,8 +22,6 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports:
-      - "${PANEL_PORT:-3000}:80"
     depends_on:
       - backend
 
