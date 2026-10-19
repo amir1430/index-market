@@ -38,3 +38,20 @@ func TestParse(t *testing.T) {
 		}
 	}
 }
+
+func TestRefusedSubscribe(t *testing.T) {
+	for _, c := range []struct {
+		ex  Exchange
+		msg string
+	}{
+		{Bybit, `{"success":false,"ret_msg":"Invalid symbol :[publicTrade.TONUSDT]","conn_id":"x","op":"subscribe"}`},
+		{OKX, `{"event":"error","code":"60018","msg":"Wrong URL or channel:trades,instId:NOPE-USDT doesn't exist.","connId":"x"}`},
+	} {
+		if _, _, err := c.ex.Parse([]byte(c.msg), nil); err == nil {
+			t.Errorf("%s: refused subscribe not reported", c.ex.Name)
+		}
+		if n := len(c.ex.Subscribe([]string{"A", "B", "C"})); n != 3 {
+			t.Errorf("%s: %d subscribe requests for 3 markets, want one each", c.ex.Name, n)
+		}
+	}
+}

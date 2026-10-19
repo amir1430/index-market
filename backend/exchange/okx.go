@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -15,11 +14,12 @@ var OKX = Exchange{
 	Native: func(base, quote string) string { return base + "-" + quote },
 	URL:    staticURL("wss://ws.okx.com:8443/ws/v5/public"),
 	Subscribe: func(natives []string) [][]byte {
-		args := make([]string, len(natives))
+		// One request per market, so an unknown one can't take the others down with it.
+		msgs := make([][]byte, len(natives))
 		for i, n := range natives {
-			args[i] = fmt.Sprintf(`{"channel":"trades","instId":"%s"}`, n)
+			msgs[i] = fmt.Appendf(nil, `{"op":"subscribe","args":[{"channel":"trades","instId":"%s"}]}`, n)
 		}
-		return [][]byte{fmt.Appendf(nil, `{"op":"subscribe","args":[%s]}`, strings.Join(args, ","))}
+		return msgs
 	},
 	Ping:      func() []byte { return []byte("ping") },
 	PingEvery: 20 * time.Second,
@@ -28,7 +28,9 @@ var OKX = Exchange{
 			return nil, nil, nil
 		}
 		var m struct {
-			Data []struct {
+			Event string `json:"event"`
+			Msg   string `json:"msg"`
+			Data  []struct {
 				InstID string `json:"instId"`
 				Px     string `json:"px"`
 				TS     string `json:"ts"`
@@ -36,6 +38,9 @@ var OKX = Exchange{
 		}
 		if err := json.Unmarshal(msg, &m); err != nil {
 			return nil, nil, err
+		}
+		if m.Event == "error" {
+			return nil, nil, fmt.Errorf("refused: %s", m.Msg) // e.g. a market OKX doesn't list
 		}
 		var ticks []Tick
 		for _, d := range m.Data {

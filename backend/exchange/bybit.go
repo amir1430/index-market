@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -14,18 +13,21 @@ var Bybit = Exchange{
 	Native: concat,
 	URL:    staticURL("wss://stream.bybit.com/v5/public/spot"),
 	Subscribe: func(natives []string) [][]byte {
-		// ponytail: one request, Bybit spot caps args at 10 per subscribe
-		args := make([]string, len(natives))
+		// One request per market: Bybit refuses a whole request over one unknown
+		// symbol (and over 10 args), losing every other market in it.
+		msgs := make([][]byte, len(natives))
 		for i, n := range natives {
-			args[i] = `"publicTrade.` + n + `"`
+			msgs[i] = []byte(`{"op":"subscribe","args":["publicTrade.` + n + `"]}`)
 		}
-		return [][]byte{fmt.Appendf(nil, `{"op":"subscribe","args":[%s]}`, strings.Join(args, ","))}
+		return msgs
 	},
 	Ping:      func() []byte { return []byte(`{"op":"ping"}`) },
 	PingEvery: 20 * time.Second,
 	Parse: func(msg []byte, syms map[string]string) ([]Tick, [][]byte, error) {
 		var m struct {
-			Data []struct {
+			Success *bool  `json:"success"`
+			RetMsg  string `json:"ret_msg"`
+			Data    []struct {
 				S    string `json:"s"`
 				Side string `json:"S"` // declared so "S" doesn't case-insensitively overwrite "s"
 				P    string `json:"p"`
@@ -34,6 +36,9 @@ var Bybit = Exchange{
 		}
 		if err := json.Unmarshal(msg, &m); err != nil {
 			return nil, nil, err
+		}
+		if m.Success != nil && !*m.Success {
+			return nil, nil, fmt.Errorf("refused: %s", m.RetMsg) // e.g. a market Bybit doesn't list
 		}
 		var ticks []Tick
 		for _, d := range m.Data {
