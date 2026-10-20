@@ -182,4 +182,4 @@ func staticURL(u string) func(context.Context, []string) (string, error) {
 func concat(base, quote string) string { return base + quote }
 
 // All returns the index's exchanges, in the order sources are listed.
-func All() []Exchange { return []Exchange{Binance, OKX, Bybit, KuCoin} }
+func All() []Exchange { return []Exchange{Binance, OKX, Bybit, KuCoin, Bitget, Gate, MEXC} }

@@ -31,6 +31,7 @@ func TestIndex(t *testing.T) {
 	tick("okx", "BTC/USDT", 500, 9, 6*time.Second) // stale: left out despite the old trade time on the others
 	tick("kucoin", "BTC/USDT", 102, 100, 0)        // 1.6% off the median (100.4): left out, however big
 	tick("binance", "ETH/USDT", 10, 1, 0)
+	b.put(exchange.Tick{Exchange: "binance", Symbol: "ETH/USDT", Price: 9, Size: 1, Time: now.Add(-2 * time.Hour), Recv: now}) // older trade, later in its batch
 
 	idx := b.index([]string{"BTC/USDT", "ETH/USDT", "SOL/USDT"}, now, w)
 	btc, eth, sol := idx[0], idx[1], idx[2]
@@ -102,7 +103,7 @@ func TestConfig(t *testing.T) {
 	if err != nil || !slices.Equal(c.markets, []string{"BTC/USDT", "ETH/USDT"}) || c.w.maxAge != 5*time.Second || c.w.minSources != 2 || c.w.halfLife != 15*time.Minute || c.w.maxDev != 0.005 || c.w.maxWeight != 0.5 {
 		t.Errorf("loadConfig = %+v, %v", c, err)
 	}
-	for k, v := range map[string]string{"MARKETS": "BTC' OR 1=1", "INDEX_MIN_SOURCES": "5", "INDEX_EVERY": "0s", "INDEX_MAX_DEVIATION": "0", "INDEX_MAX_WEIGHT": "1.5", "INDEX_VOLUME_HALFLIFE": "-1m"} {
+	for k, v := range map[string]string{"MARKETS": "BTC' OR 1=1", "INDEX_MIN_SOURCES": "8", "INDEX_EVERY": "0s", "INDEX_MAX_DEVIATION": "0", "INDEX_MAX_WEIGHT": "1.5", "INDEX_VOLUME_HALFLIFE": "-1m"} {
 		t.Run(k, func(t *testing.T) {
 			t.Setenv(k, v)
 			if _, err := loadConfig(); err == nil {

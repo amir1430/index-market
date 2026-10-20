@@ -23,6 +23,9 @@
   --okx: #8b5cd6;
   --bybit: #8c6d46;
   --kucoin: #eb6834;
+  --bitget: #d4488f;
+  --gate: #1baf7a;
+  --mexc: #eda100;
   --index: var(--text);
 }
 @media (prefers-color-scheme: dark) {
@@ -46,6 +49,9 @@
     --okx: #9d74e8;
     --bybit: #a8865a;
     --kucoin: #d95926;
+    --bitget: #e0609f;
+    --gate: #199e70;
+    --mexc: #c98500;
   }
 }
 :root[data-theme='dark'] {
@@ -68,6 +74,9 @@
   --okx: #9d74e8;
   --bybit: #a8865a;
   --kucoin: #d95926;
+  --bitget: #e0609f;
+  --gate: #199e70;
+  --mexc: #c98500;
 }
 
 * { box-sizing: border-box; }

@@ -43,7 +43,7 @@ export default function App() {
           </span>
           <div>
             <h1>Index Market</h1>
-            <p className="sub">Volume-weighted index of Binance, OKX, Bybit and KuCoin · sources silent &gt;{fmtAge(staleMs)} or off the median excluded</p>
+            <p className="sub">Volume-weighted index of Binance, OKX, Bybit, KuCoin, Bitget, Gate and MEXC · sources silent &gt;{fmtAge(staleMs)} or off the median excluded</p>
           </div>
         </div>
         <div className="header-right">

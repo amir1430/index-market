@@ -5,6 +5,7 @@ go 1.26.3
 require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/redis/go-redis/v9 v9.23.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (

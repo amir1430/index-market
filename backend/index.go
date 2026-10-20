@@ -124,7 +124,13 @@ func (b *book) put(t exchange.Tick) {
 		b.last[t.Symbol] = m
 	}
 	s := m[t.Exchange]
-	m[t.Exchange] = slot{tick: t, vol: s.vol*b.decay(t.Recv.Sub(s.tick.Recv)) + t.Price*t.Size}
+	vol := s.vol*b.decay(t.Recv.Sub(s.tick.Recv)) + t.Price*t.Size
+	if s.tick.Time.After(t.Time) {
+		// An older trade (some exchanges send a batch newest first): its volume
+		// counts, the price stays the newest trade's.
+		t.Price, t.Time = s.tick.Price, s.tick.Time
+	}
+	m[t.Exchange] = slot{tick: t, vol: vol}
 }
 
 // slots returns sym's slot per exchange, in exchange.All() order, volumes decayed to now.
