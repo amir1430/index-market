@@ -22,6 +22,7 @@
   --binance: #2a78d6;
   --okx: #8b5cd6;
   --bybit: #8c6d46;
+  --kucoin: #eb6834;
   --index: var(--text);
 }
 @media (prefers-color-scheme: dark) {
@@ -44,6 +45,7 @@
     --binance: #3987e5;
     --okx: #9d74e8;
     --bybit: #a8865a;
+    --kucoin: #d95926;
   }
 }
 :root[data-theme='dark'] {
@@ -65,6 +67,7 @@
   --binance: #3987e5;
   --okx: #9d74e8;
   --bybit: #a8865a;
+  --kucoin: #d95926;
 }
 
 * { box-sizing: border-box; }
@@ -154,6 +157,7 @@ header { display: flex; justify-content: space-between; align-items: center; gap
 .card td.num { padding-left: 12px; }
 .card td.dev { color: var(--text-2); width: 5.5em; }
 .card td.age { width: 3em; }
+.card td.weight { color: var(--text-2); width: 3.5em; }
 .card tr.stale td { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--border); }
 .card tr.stale td.age { text-decoration: none; }
 

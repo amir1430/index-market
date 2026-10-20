@@ -27,11 +27,10 @@ func env(k, def string) string {
 }
 
 type config struct {
-	markets    []string
-	every      time.Duration // index tick interval
-	maxAge     time.Duration // an exchange with no tick for this long leaves the index
-	minSources int           // fewer fresh exchanges = stale
-	maxLen     int64         // Valkey stream length per market (approximate)
+	markets []string
+	every   time.Duration // index tick interval
+	w       weighting
+	maxLen  int64 // Valkey stream length per market (approximate)
 }
 
 // Symbols end up inside QuestDB SQL (no bind params there), so keep them strict.
@@ -52,11 +51,20 @@ func loadConfig() (config, error) {
 	if c.every, err = time.ParseDuration(env("INDEX_EVERY", "250ms")); err != nil || c.every <= 0 {
 		return c, fmt.Errorf("INDEX_EVERY: want a duration like 250ms")
 	}
-	if c.maxAge, err = time.ParseDuration(env("INDEX_MAX_AGE", "5s")); err != nil || c.maxAge <= 0 {
+	if c.w.maxAge, err = time.ParseDuration(env("INDEX_MAX_AGE", "5s")); err != nil || c.w.maxAge <= 0 {
 		return c, fmt.Errorf("INDEX_MAX_AGE: want a duration like 5s")
 	}
-	if c.minSources, err = strconv.Atoi(env("INDEX_MIN_SOURCES", "2")); err != nil || c.minSources < 1 || c.minSources > len(exchange.All()) {
+	if c.w.minSources, err = strconv.Atoi(env("INDEX_MIN_SOURCES", "2")); err != nil || c.w.minSources < 1 || c.w.minSources > len(exchange.All()) {
 		return c, fmt.Errorf("INDEX_MIN_SOURCES: want 1..%d", len(exchange.All()))
+	}
+	if c.w.halfLife, err = time.ParseDuration(env("INDEX_VOLUME_HALFLIFE", "15m")); err != nil || c.w.halfLife <= 0 {
+		return c, fmt.Errorf("INDEX_VOLUME_HALFLIFE: want a duration like 15m")
+	}
+	if c.w.maxDev, err = strconv.ParseFloat(env("INDEX_MAX_DEVIATION", "0.005"), 64); err != nil || !(c.w.maxDev > 0 && c.w.maxDev < 1) {
+		return c, fmt.Errorf("INDEX_MAX_DEVIATION: want a fraction like 0.005 (0.5%%)")
+	}
+	if c.w.maxWeight, err = strconv.ParseFloat(env("INDEX_MAX_WEIGHT", "0.5"), 64); err != nil || !(c.w.maxWeight > 0 && c.w.maxWeight <= 1) {
+		return c, fmt.Errorf("INDEX_MAX_WEIGHT: want a fraction like 0.5, at most 1")
 	}
 	if c.maxLen, err = strconv.ParseInt(env("VALKEY_MAXLEN", "14400"), 10, 64); err != nil || c.maxLen < 1 {
 		return c, fmt.Errorf("VALKEY_MAXLEN: want a positive number")
@@ -89,7 +97,7 @@ func main() {
 		close(written)
 	}()
 
-	bk := newBook()
+	bk := newBook(cfg.w.halfLife)
 	ticks := make(chan exchange.Tick, 4096)
 	for _, ex := range exchange.All() {
 		go exchange.Run(ctx, ex, cfg.markets, ticks)
@@ -107,7 +115,7 @@ func main() {
 	}()
 
 	var latest atomic.Pointer[[]indexPrice]
-	first := bk.index(cfg.markets, time.Now().UTC(), cfg.maxAge, cfg.minSources)
+	first := bk.index(cfg.markets, time.Now().UTC(), cfg.w)
 	latest.Store(&first)
 	go func() {
 		t := time.NewTicker(cfg.every)
@@ -117,7 +125,7 @@ func main() {
 			case <-ctx.Done():
 				return
 			case now := <-t.C:
-				idx := bk.index(cfg.markets, now.UTC(), cfg.maxAge, cfg.minSources)
+				idx := bk.index(cfg.markets, now.UTC(), cfg.w)
 				latest.Store(&idx)
 				for _, ip := range idx {
 					send(lines, indexLine(ip))
@@ -133,8 +141,9 @@ func main() {
 		type source struct {
 			Exchange string    `json:"exchange"`
 			Price    float64   `json:"price"`
-			TS       time.Time `json:"ts"`    // trade time
-			Fresh    bool      `json:"fresh"` // counted in the index
+			TS       time.Time `json:"ts"`     // trade time
+			Fresh    bool      `json:"fresh"`  // heard from within maxAge
+			Weight   float64   `json:"weight"` // share of the index, 0 = not counted (stale or off the median)
 		}
 		type market struct {
 			Symbol    string     `json:"symbol"`
@@ -150,14 +159,20 @@ func main() {
 			base, quote, _ := strings.Cut(ip.Symbol, "/")
 			m := market{Symbol: ip.Symbol, Base: base, Quote: quote, Stream: streamKey(ip.Symbol), Index: ip, Exchanges: []source{}}
 			for _, t := range bk.ticks(ip.Symbol) {
-				m.Exchanges = append(m.Exchanges, source{t.Exchange, t.Price, t.Time.UTC(), fresh(t, ip.TS, cfg.maxAge)})
+				var wt float64
+				if i := slices.Index(ip.Sources, t.Exchange); i >= 0 {
+					wt = ip.Weights[i]
+				}
+				m.Exchanges = append(m.Exchanges, source{t.Exchange, t.Price, t.Time.UTC(), fresh(t, ip.TS, cfg.w.maxAge), wt})
 			}
 			out[i] = m
 		}
 		writeJSON(w, map[string]any{
 			"markets":    out,
-			"maxAgeMs":   cfg.maxAge.Milliseconds(),
-			"minSources": cfg.minSources,
+			"maxAgeMs":   cfg.w.maxAge.Milliseconds(),
+			"minSources": cfg.w.minSources,
+			"maxDev":     cfg.w.maxDev,
+			"maxWeight":  cfg.w.maxWeight,
 			"everyMs":    cfg.every.Milliseconds(),
 		})
 	})
@@ -172,17 +187,28 @@ func main() {
 			return
 		}
 		// FILL(PREV): an exchange with no trade in a bucket keeps its last price,
-		// so the per-bucket median doesn't jump when a quiet market skips one.
+		// so a quiet market doesn't leave holes in its line.
 		// ponytail: carries a dead exchange's price forward within the range; cap by age if that matters
 		rows, err := db.query(r.Context(), `SELECT ts, exchange, last(price) price FROM prices
 			WHERE symbol = '`+sym+`' AND ts > `+rg[0]+`
 			SAMPLE BY `+rg[1]+` FILL(PREV) ALIGN TO CALENDAR ORDER BY ts`)
+		if err == nil {
+			// The index line is the index as published (volume-weighted), not recomputed.
+			var idx []map[string]any
+			idx, err = db.query(r.Context(), `SELECT ts, last(price) price FROM index_prices
+				WHERE symbol = '`+sym+`' AND ts > `+rg[0]+`
+				SAMPLE BY `+rg[1]+` FILL(PREV) ALIGN TO CALENDAR ORDER BY ts`)
+			for _, row := range idx {
+				row["exchange"] = "index"
+			}
+			rows = append(rows, idx...)
+		}
 		if err != nil {
 			log.Printf("query: %v", err)
 			http.Error(w, "query failed", http.StatusBadGateway)
 			return
 		}
-		writeJSON(w, withIndexSeries(rows))
+		writeJSON(w, rows)
 	})
 
 	srv := &http.Server{Addr: env("ADDR", ":8080"), Handler: mux}

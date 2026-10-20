@@ -43,7 +43,7 @@ export default function App() {
           </span>
           <div>
             <h1>Index Market</h1>
-            <p className="sub">Median index of Binance, OKX and Bybit · sources silent &gt;{fmtAge(staleMs)} excluded</p>
+            <p className="sub">Volume-weighted index of Binance, OKX, Bybit and KuCoin · sources silent &gt;{fmtAge(staleMs)} or off the median excluded</p>
           </div>
         </div>
         <div className="header-right">
@@ -128,13 +128,18 @@ function Card({ market, minSources, now, on, onClick }) {
       <table>
         <tbody>
           {exchanges.map((r) => (
-            <tr key={r.exchange} className={r.fresh ? '' : 'stale'} title={r.fresh ? undefined : 'excluded from index: stale'}>
+            <tr
+              key={r.exchange}
+              className={r.weight > 0 ? '' : 'stale'}
+              title={r.weight > 0 ? undefined : r.fresh ? 'excluded from index: too far from the median' : 'excluded from index: stale'}
+            >
               <td>
                 <i className="swatch" style={{ background: `var(--${r.exchange})` }} />
                 {r.exchange}
               </td>
               <td className="num">{fmtPrice(r.price, symbol)}</td>
               {multi && <td className="num dev">{fmtPct(r.price / index.price - 1)}</td>}
+              <td className="num weight" title="share of the index">{r.weight > 0 ? `${Math.round(r.weight * 100)}%` : '—'}</td>
               <td className="num muted age">{fmtAge(now - Date.parse(r.ts))}</td>
             </tr>
           ))}

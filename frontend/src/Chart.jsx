@@ -4,7 +4,7 @@ import { EXCHANGES, fmtPct, fmtPrice } from './lib.js'
 const H = 340
 const M = { top: 12, right: 84, bottom: 28 } // left is sized to the y labels
 
-// rows: [{ts, exchange, price}] per bucket; exchange "index" is the median line.
+// rows: [{ts, exchange, price}] per bucket; exchange "index" is the published (volume-weighted) index.
 export default function Chart({ rows, symbol }) {
   const wrap = useRef(null)
   const [w, setW] = useState(800)

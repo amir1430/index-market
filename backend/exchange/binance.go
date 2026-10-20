@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // Binance: combined trade streams, symbols encoded in the URL.
@@ -26,20 +25,14 @@ var Binance = Exchange{
 			Data struct {
 				S string `json:"s"`
 				P string `json:"p"`
+				Q string `json:"q"`
 				T int64  `json:"T"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(msg, &m); err != nil {
 			return nil, nil, err
 		}
-		sym, ok := syms[m.Data.S]
-		if !ok {
-			return nil, nil, nil
-		}
-		p, err := strconv.ParseFloat(m.Data.P, 64)
-		if err != nil {
-			return nil, nil, err
-		}
-		return []Tick{{Symbol: sym, Price: p, Time: time.UnixMilli(m.Data.T)}}, nil, nil
+		t, err := tradeTick(syms, m.Data.S, m.Data.P, m.Data.Q, strconv.FormatInt(m.Data.T, 10))
+		return t, nil, err
 	},
 }

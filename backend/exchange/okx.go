@@ -33,6 +33,7 @@ var OKX = Exchange{
 			Data  []struct {
 				InstID string `json:"instId"`
 				Px     string `json:"px"`
+				Sz     string `json:"sz"`
 				TS     string `json:"ts"`
 			} `json:"data"`
 		}
@@ -44,7 +45,7 @@ var OKX = Exchange{
 		}
 		var ticks []Tick
 		for _, d := range m.Data {
-			t, err := tradeTick(syms, d.InstID, d.Px, d.TS)
+			t, err := tradeTick(syms, d.InstID, d.Px, d.Sz, d.TS)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -54,8 +55,8 @@ var OKX = Exchange{
 	},
 }
 
-// tradeTick builds a tick from string price and ms timestamp, nil if the symbol isn't ours.
-func tradeTick(syms map[string]string, native, price, ms string) ([]Tick, error) {
+// tradeTick builds a tick from string price, size and ms timestamp, nil if the symbol isn't ours.
+func tradeTick(syms map[string]string, native, price, size, ms string) ([]Tick, error) {
 	sym, ok := syms[native]
 	if !ok {
 		return nil, nil
@@ -64,9 +65,13 @@ func tradeTick(syms map[string]string, native, price, ms string) ([]Tick, error)
 	if err != nil {
 		return nil, err
 	}
+	sz, err := strconv.ParseFloat(size, 64)
+	if err != nil {
+		return nil, err
+	}
 	ts, err := strconv.ParseInt(ms, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	return []Tick{{Symbol: sym, Price: p, Time: time.UnixMilli(ts)}}, nil
+	return []Tick{{Symbol: sym, Price: p, Size: sz, Time: time.UnixMilli(ts)}}, nil
 }

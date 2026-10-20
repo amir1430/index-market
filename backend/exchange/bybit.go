@@ -31,6 +31,7 @@ var Bybit = Exchange{
 				S    string `json:"s"`
 				Side string `json:"S"` // declared so "S" doesn't case-insensitively overwrite "s"
 				P    string `json:"p"`
+				V    string `json:"v"`
 				T    int64  `json:"T"`
 			} `json:"data"`
 		}
@@ -42,7 +43,7 @@ var Bybit = Exchange{
 		}
 		var ticks []Tick
 		for _, d := range m.Data {
-			t, err := tradeTick(syms, d.S, d.P, strconv.FormatInt(d.T, 10))
+			t, err := tradeTick(syms, d.S, d.P, d.V, strconv.FormatInt(d.T, 10))
 			if err != nil {
 				return nil, nil, err
 			}

@@ -20,6 +20,7 @@ type Tick struct {
 	Exchange string
 	Symbol   string
 	Price    float64
+	Size     float64   // traded amount in base units (the index weighs exchanges by volume)
 	Time     time.Time // trade time, the exchange's clock
 	Recv     time.Time // when we read it, our clock: staleness is measured on this
 }
@@ -34,7 +35,7 @@ type Exchange struct {
 	URL func(ctx context.Context, natives []string) (string, error)
 	// Subscribe returns messages to send right after connecting.
 	Subscribe func(natives []string) [][]byte
-	// Parse turns one frame into ticks. syms maps native symbol -> normalized.
+	// Parse turns one frame into trade ticks (price and size). syms maps native symbol -> normalized.
 	// replies are written back (protocol pongs, handshakes).
 	Parse func(msg []byte, syms map[string]string) (ticks []Tick, replies [][]byte, err error)
 	// Ping, if set, is sent every PingEvery.
@@ -181,4 +182,4 @@ func staticURL(u string) func(context.Context, []string) (string, error) {
 func concat(base, quote string) string { return base + quote }
 
 // All returns the index's exchanges, in the order sources are listed.
-func All() []Exchange { return []Exchange{Binance, OKX, Bybit} }
+func All() []Exchange { return []Exchange{Binance, OKX, Bybit, KuCoin} }
