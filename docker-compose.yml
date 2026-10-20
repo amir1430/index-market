@@ -18,6 +18,9 @@ services:
       VALKEY_MAXLEN: ${VALKEY_MAXLEN:-14400}
     depends_on:
       - questdb
+    networks:
+      - default # questdb, frontend
+      - casino-net # casino-valkey, read by the casino's Up/Down
 
   frontend:
     build: ./frontend
@@ -27,3 +30,7 @@ services:
 
 volumes:
   questdb-data:
+
+networks:
+  casino-net:
+    external: true
